@@ -56,4 +56,13 @@
 // A MCP Test: Control a lamp
 #define LAMP_GPIO GPIO_NUM_18
 
+// 小车电机控制 (L298N 驱动，6 根控制线)
+// ESP32 → L298N 控制端：
+#define MOTOR_ENA  GPIO_NUM_45   // 左轮 PWM 速度 → L298N ENA
+#define MOTOR_IN1  GPIO_NUM_21   // 左轮方向 1 → L298N IN1
+#define MOTOR_IN2  GPIO_NUM_14   // 左轮方向 2 → L298N IN2
+#define MOTOR_ENB  GPIO_NUM_46   // 右轮 PWM 速度 → L298N ENB
+#define MOTOR_IN3  GPIO_NUM_13   // 右轮方向 1 → L298N IN3
+#define MOTOR_IN4  GPIO_NUM_12   // 右轮方向 2 → L298N IN4
+
 #endif // _BOARD_CONFIG_H_

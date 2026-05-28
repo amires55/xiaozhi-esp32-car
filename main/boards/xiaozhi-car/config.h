@@ -1,0 +1,37 @@
+#ifndef _BOARD_CONFIG_H_
+#define _BOARD_CONFIG_H_
+
+#include <driver/gpio.h>
+
+#define AUDIO_INPUT_SAMPLE_RATE  16000
+#define AUDIO_OUTPUT_SAMPLE_RATE 24000
+
+// Duplex I2S 模式
+#define AUDIO_I2S_GPIO_WS GPIO_NUM_4
+#define AUDIO_I2S_GPIO_BCLK GPIO_NUM_5
+#define AUDIO_I2S_GPIO_DIN  GPIO_NUM_6
+#define AUDIO_I2S_GPIO_DOUT GPIO_NUM_7
+
+#define BUILTIN_LED_GPIO        GPIO_NUM_48
+#define BOOT_BUTTON_GPIO        GPIO_NUM_0
+#define TOUCH_BUTTON_GPIO       GPIO_NUM_47
+#define VOLUME_UP_BUTTON_GPIO   GPIO_NUM_40
+#define VOLUME_DOWN_BUTTON_GPIO GPIO_NUM_39
+
+#define DISPLAY_SDA_PIN GPIO_NUM_41
+#define DISPLAY_SCL_PIN GPIO_NUM_42
+#define DISPLAY_WIDTH   128
+#define DISPLAY_HEIGHT  64
+#define DISPLAY_MIRROR_X true
+#define DISPLAY_MIRROR_Y true
+
+// 小车电机控制 (L298N 驱动，6 根控制线)
+// ESP32 → L298N 控制端：
+#define MOTOR_ENA  GPIO_NUM_45   // 左轮 PWM 速度 → L298N ENA
+#define MOTOR_IN1  GPIO_NUM_21   // 左轮方向 1 → L298N IN1
+#define MOTOR_IN2  GPIO_NUM_14   // 左轮方向 2 → L298N IN2
+#define MOTOR_ENB  GPIO_NUM_46   // 右轮 PWM 速度 → L298N ENB
+#define MOTOR_IN3  GPIO_NUM_13   // 右轮方向 1 → L298N IN3
+#define MOTOR_IN4  GPIO_NUM_12   // 右轮方向 2 → L298N IN4
+
+#endif // _BOARD_CONFIG_H_

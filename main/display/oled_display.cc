@@ -5,6 +5,7 @@
 
 #include <string>
 #include <algorithm>
+#include <cstring>
 
 #include <esp_log.h>
 #include <esp_err.h>
@@ -124,6 +125,15 @@ OledDisplay::~OledDisplay() {
     }
     if (container_ != nullptr) {
         lv_obj_del(container_);
+    }
+
+    if (cat_canvas_ != nullptr) {
+        lv_obj_del(cat_canvas_);
+        cat_canvas_ = nullptr;
+    }
+    if (cat_canvas_buf_ != nullptr) {
+        heap_caps_free(cat_canvas_buf_);
+        cat_canvas_buf_ = nullptr;
     }
 
     if (panel_ != nullptr) {
@@ -261,6 +271,7 @@ void OledDisplay::SetupUI_128x64() {
     lv_label_set_text(emotion_label_, FONT_AWESOME_MICROCHIP_AI);
     lv_obj_center(emotion_label_);
     lv_obj_set_style_pad_top(emotion_label_, 8, 0);
+    SetupCatCanvas();
 
     content_right_ = lv_obj_create(content_);
     lv_obj_set_size(content_right_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -327,6 +338,7 @@ void OledDisplay::SetupUI_128x32() {
     lv_obj_set_style_text_font(emotion_label_, large_icon_font, 0);
     lv_label_set_text(emotion_label_, FONT_AWESOME_MICROCHIP_AI);
     lv_obj_center(emotion_label_);
+    SetupCatCanvas();
 
     /* Right side */
     side_bar_ = lv_obj_create(container_);
@@ -384,12 +396,101 @@ void OledDisplay::SetupUI_128x32() {
     lv_obj_set_style_anim_duration(chat_message_label_, lv_anim_speed_clamped(60, 300, 60000), LV_PART_MAIN);
 }
 
+static const uint8_t CAT_BITS[] = {
+    0x18, 0x00, 0x00, 0x18, 0x3C, 0x00, 0x00, 0x3C,
+    0x7E, 0x00, 0x00, 0x7E, 0xFF, 0x00, 0x00, 0xFF,
+    0xFF, 0x81, 0x81, 0xFF, 0xFF, 0xC3, 0xC3, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xFE, 0x3C, 0x3C, 0x7F, 0xFC, 0x18, 0x18, 0x3F,
+    0xFE, 0x00, 0x00, 0x7F, 0xFF, 0x00, 0x00, 0xFF,
+    0xFF, 0x80, 0x01, 0xFF, 0xFF, 0xC0, 0x03, 0xFF,
+    0xFF, 0xE0, 0x07, 0xFF, 0xFF, 0xF0, 0x0F, 0xFF,
+    0xFF, 0xF8, 0x1F, 0xFF, 0xFF, 0xFC, 0x3F, 0xFF,
+    0xFF, 0xFE, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0x7F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFC,
+    0x1F, 0xFF, 0xFF, 0xF8, 0x0F, 0xFF, 0xFF, 0xF0,
+    0x07, 0xFF, 0xFF, 0xE0, 0x03, 0xFF, 0xFF, 0xC0,
+    0x01, 0xFF, 0xFF, 0x80, 0x00, 0xFF, 0xFF, 0x00,
+    0x00, 0x7E, 0x7E, 0x00, 0x00, 0x3C, 0x3C, 0x00,
+    0x00, 0x18, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
+static const uint8_t CAT_HUFF_BITS[] = {
+    0x18, 0x00, 0x00, 0x18, 0x3C, 0x00, 0x00, 0x3C,
+    0x7E, 0x00, 0x00, 0x7E, 0xFF, 0x00, 0x00, 0xFF,
+    0xFF, 0x81, 0x81, 0xFF, 0xFF, 0x43, 0xC2, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xFE, 0x3C, 0x3C, 0x7F, 0xFC, 0x18, 0x18, 0x3F,
+    0xFE, 0x00, 0x00, 0x7F, 0xFF, 0x00, 0x00, 0xFF,
+    0xFF, 0x80, 0x01, 0xFF, 0xFF, 0xC0, 0x03, 0xFF,
+    0xFF, 0xE0, 0x07, 0xFF, 0xFF, 0xF0, 0x0F, 0xFF,
+    0xFF, 0xF8, 0x1F, 0xFF, 0xFF, 0xFC, 0x3F, 0xFF,
+    0xFF, 0xFE, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0x7F, 0xFF, 0xFF, 0xFE, 0x3F, 0xFF, 0xFF, 0xFC,
+    0x1F, 0xFF, 0xFF, 0xF8, 0x0F, 0xFF, 0xFF, 0xF0,
+    0x07, 0xFF, 0xFF, 0xE0, 0x03, 0xFF, 0xFF, 0xC0,
+    0x81, 0xFF, 0xFF, 0x81, 0xC0, 0xFF, 0xFF, 0x03,
+    0xE0, 0x7E, 0x7E, 0x07, 0xF0, 0x3C, 0x3C, 0x0F,
+    0x00, 0x18, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
+void OledDisplay::ShowEmotionLabel(bool show) {
+    if (emotion_label_ == nullptr) return;
+    if (show) {
+        lv_obj_remove_flag(emotion_label_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(emotion_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void OledDisplay::DrawCatPixel(int x, int y, uint8_t* buf, int w) {
+    int byte_idx = y * (w / 8) + x / 8;
+    int bit_idx = 7 - (x % 8);
+    buf[byte_idx] |= (1 << bit_idx);
+}
+
+void OledDisplay::SetupCatCanvas() {
+    if (cat_canvas_ != nullptr) return;
+    auto screen = lv_screen_active();
+    cat_canvas_buf_ = (uint8_t*)heap_caps_malloc(32 * 32 / 8, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (cat_canvas_buf_ == nullptr) return;
+    cat_canvas_ = lv_canvas_create(screen);
+    lv_canvas_set_buffer(cat_canvas_, cat_canvas_buf_, 32, 32, LV_COLOR_FORMAT_I1);
+    lv_obj_set_style_pad_all(cat_canvas_, 0, 0);
+    lv_obj_set_style_border_width(cat_canvas_, 0, 0);
+    lv_obj_add_flag(cat_canvas_, LV_OBJ_FLAG_HIDDEN);
+}
+
+void OledDisplay::ShowCatFace(bool huff) {
+    if (cat_canvas_ == nullptr || cat_canvas_buf_ == nullptr) return;
+    memset(cat_canvas_buf_, 0, 32 * 32 / 8);
+    const uint8_t* src = huff ? CAT_HUFF_BITS : CAT_BITS;
+    memcpy(cat_canvas_buf_, src, 32 * 32 / 8);
+    lv_obj_invalidate(cat_canvas_);
+    lv_obj_remove_flag(cat_canvas_, LV_OBJ_FLAG_HIDDEN);
+}
+
 void OledDisplay::SetEmotion(const char* emotion) {
-    const char* utf8 = font_awesome_get_utf8(emotion);
     DisplayLockGuard lock(this);
-    if (emotion_label_ == nullptr) {
+    if (emotion_label_ == nullptr) return;
+
+    if (strcmp(emotion, "orange_cat") == 0 || strcmp(emotion, "mao_cat") == 0) {
+        ShowCatFace(false);
+        ShowEmotionLabel(false);
         return;
     }
+    if (strcmp(emotion, "cat_huff") == 0 || strcmp(emotion, "mao_huff") == 0) {
+        ShowCatFace(true);
+        ShowEmotionLabel(false);
+        return;
+    }
+
+    if (cat_canvas_ != nullptr) {
+        lv_obj_add_flag(cat_canvas_, LV_OBJ_FLAG_HIDDEN);
+    }
+    ShowEmotionLabel(true);
+
+    const char* utf8 = font_awesome_get_utf8(emotion);
     if (utf8 != nullptr) {
         lv_label_set_text(emotion_label_, utf8);
     } else {

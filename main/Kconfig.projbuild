@@ -566,6 +566,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_AI_VOX3
         bool "NULLLAB-AI-VOX3"
         depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_XIAOZHI_CAR
+        bool "小智AI小车 (自定义)"
+        depends on IDF_TARGET_ESP32S3
 endchoice
 
 choice

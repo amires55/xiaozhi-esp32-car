@@ -16,6 +16,7 @@
 #include <driver/gpio.h>
 #include <arpa/inet.h>
 #include <font_awesome.h>
+#include "motor_controller.h"
 
 #define TAG "Application"
 
@@ -392,7 +393,7 @@ void Application::CheckAssetsVersion() {
     // Apply assets
     assets.Apply();
     display->SetChatMessage("system", "");
-    display->SetEmotion("microchip_ai");
+    display->SetEmotion("face_smile");
 }
 
 void Application::CheckNewVersion() {
@@ -550,9 +551,20 @@ void Application::InitializeProtocol() {
         } else if (strcmp(type->valuestring, "stt") == 0) {
             auto text = cJSON_GetObjectItem(root, "text");
             if (cJSON_IsString(text)) {
-                ESP_LOGI(TAG, ">> %s", text->valuestring);
-                Schedule([display, message = std::string(text->valuestring)]() {
-                    display->SetChatMessage("user", message.c_str());
+                std::string msg = text->valuestring;
+                ESP_LOGI(TAG, ">> %s", msg.c_str());
+                Schedule([display, msg]() {
+                    display->SetChatMessage("user", msg.c_str());
+                    if (msg.find("前进") != std::string::npos || msg.find("往前") != std::string::npos)
+                        MotorControl("forward", 50);
+                    else if (msg.find("后退") != std::string::npos || msg.find("倒车") != std::string::npos)
+                        MotorControl("backward", 50);
+                    else if (msg.find("左转") != std::string::npos)
+                        MotorControl("turn_left", 50);
+                    else if (msg.find("右转") != std::string::npos)
+                        MotorControl("turn_right", 50);
+                    else if (msg.find("停止") != std::string::npos || msg.find("停车") != std::string::npos)
+                        MotorControl("stop", 0);
                 });
             }
         } else if (strcmp(type->valuestring, "llm") == 0) {

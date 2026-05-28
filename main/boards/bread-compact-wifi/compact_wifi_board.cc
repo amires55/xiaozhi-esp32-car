@@ -7,6 +7,7 @@
 #include "config.h"
 #include "mcp_server.h"
 #include "lamp_controller.h"
+#include "motor_controller.h"
 #include "led/single_led.h"
 #include "assets/lang_config.h"
 
@@ -14,12 +15,16 @@
 #include <driver/i2c_master.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #ifdef SH1106
 #include <esp_lcd_panel_sh1106.h>
 #endif
 
 #define TAG "CompactWifiBoard"
+
+MotorController* g_motor = nullptr;
 
 class CompactWifiBoard : public WifiBoard {
 private:
@@ -49,7 +54,6 @@ private:
     }
 
     void InitializeSsd1306Display() {
-        // SSD1306 config
         esp_lcd_panel_io_i2c_config_t io_config = {
             .dev_addr = 0x3C,
             .on_color_trans_done = nullptr,
@@ -84,7 +88,6 @@ private:
 #endif
         ESP_LOGI(TAG, "SSD1306 driver installed");
 
-        // Reset the display
         ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_));
         if (esp_lcd_panel_init(panel_) != ESP_OK) {
             ESP_LOGE(TAG, "Failed to initialize display");
@@ -92,9 +95,6 @@ private:
             return;
         }
         ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel_, false));
-
-        // Set the display to on
-        ESP_LOGI(TAG, "Turning display on");
         ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_, true));
 
         display_ = new OledDisplay(panel_io_, panel_, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
@@ -119,9 +119,7 @@ private:
         volume_up_button_.OnClick([this]() {
             auto codec = GetAudioCodec();
             auto volume = codec->output_volume() + 10;
-            if (volume > 100) {
-                volume = 100;
-            }
+            if (volume > 100) volume = 100;
             codec->SetOutputVolume(volume);
             GetDisplay()->ShowNotification(Lang::Strings::VOLUME + std::to_string(volume));
         });
@@ -134,9 +132,7 @@ private:
         volume_down_button_.OnClick([this]() {
             auto codec = GetAudioCodec();
             auto volume = codec->output_volume() - 10;
-            if (volume < 0) {
-                volume = 0;
-            }
+            if (volume < 0) volume = 0;
             codec->SetOutputVolume(volume);
             GetDisplay()->ShowNotification(Lang::Strings::VOLUME + std::to_string(volume));
         });
@@ -147,9 +143,48 @@ private:
         });
     }
 
-    // 物联网初始化，逐步迁移到 MCP 协议
     void InitializeTools() {
         static LampController lamp(LAMP_GPIO);
+        {
+            auto& m = McpServer::GetInstance();
+            m.AddTool("self.display.set_emotion", R"(Set the display emotion.
+Standard: neutral happy sad angry surprised sleepy loving winking cool funny crying laughing.
+Cat mode: orange_cat (cat face), cat_huff (cat blowing air).)",
+                PropertyList({Property("emotion", kPropertyTypeString)}),
+                [](const PropertyList& p) -> ReturnValue {
+                    auto& board = Board::GetInstance();
+                    auto display = board.GetDisplay();
+                    if (display) { display->SetEmotion(p["emotion"].value<std::string>().c_str()); return true; }
+                    return false;
+                });
+        }
+        g_motor = new MotorController(
+            MOTOR_ENA, MOTOR_IN1, MOTOR_IN2,
+            MOTOR_ENB, MOTOR_IN3, MOTOR_IN4
+        );
+        ESP_LOGI(TAG, "=== 电机自检：前进 0.5秒 ===");
+        g_motor->Forward(30);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        g_motor->Stop();
+        ESP_LOGI(TAG, "=== 电机自检完成 ===");
+        auto& mcp = McpServer::GetInstance();
+        mcp.AddTool("self.chassis.control",
+            "控制小车底盘运动。小车可以执行以下动作：\n"
+            "forward: 前进/向前走/往前开\n"
+            "backward: 后退/倒车\n"
+            "turn_left: 左转\n"
+            "turn_right: 右转\n"
+            "stop: 停止/停车\n"
+            "当用户说出以上指令时必须调用此工具。\n"
+            "speed参数范围0-100，默认50。",
+            PropertyList({
+                Property("action", kPropertyTypeString),
+                Property("speed", kPropertyTypeInteger, 50, 0, 100),
+            }),
+            [](const PropertyList& p) -> ReturnValue {
+                MotorControl(p["action"].value<std::string>(), p["speed"].value<int>());
+                return true;
+            });
     }
 
 public:
