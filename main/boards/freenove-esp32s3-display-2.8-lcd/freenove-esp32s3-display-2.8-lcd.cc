@@ -24,7 +24,9 @@
 #include "esp_lcd_ili9341.h"
 
 #define TAG "FreenoveESP32S3Display"
+#include "motor_controller.h"
 
+MotorController* g_motor = nullptr;
 class TouchDriver {
 public:
     TouchDriver() : dev_(nullptr) {}
