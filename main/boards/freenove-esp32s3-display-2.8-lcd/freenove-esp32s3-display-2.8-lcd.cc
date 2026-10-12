@@ -198,8 +198,7 @@ private:
             DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
 
-    void InitializeTools() {
-    }
+InitializeTouch();
 
 public:
     FreenoveESP32S3Display(): boot_button_(BOOT_BUTTON_GPIO)
