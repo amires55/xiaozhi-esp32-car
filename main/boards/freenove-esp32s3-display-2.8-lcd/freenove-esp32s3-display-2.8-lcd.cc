@@ -198,7 +198,30 @@ private:
             DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
 
-InitializeTouch();
+void InitializeTools() {
+    g_motor = new MotorController(
+        GPIO_NUM_NC, MOTOR_IN1, MOTOR_IN2,
+        GPIO_NUM_NC, MOTOR_IN3, MOTOR_IN4
+    );
+
+    auto& mcp = McpServer::GetInstance();
+
+    mcp.AddTool(
+        "self.chassis.control",
+        "Control the robot: forward, backward, turn_left, turn_right, stop.",
+        PropertyList({
+            Property("action", kPropertyTypeString),
+            Property("speed", kPropertyTypeInteger, 50, 0, 100),
+        }),
+        [](const PropertyList& p) -> ReturnValue {
+            MotorControl(
+                p["action"].value<std::string>(),
+                p["speed"].value<int>()
+            );
+            return true;
+        }
+    );
+}
 
 public:
     FreenoveESP32S3Display(): boot_button_(BOOT_BUTTON_GPIO)
