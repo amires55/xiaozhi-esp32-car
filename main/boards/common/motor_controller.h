@@ -65,7 +65,10 @@ public:
         InitOut(in1); InitOut(in2); InitOut(in3); InitOut(in4);
         InitPwm(ena, LEDC_CHANNEL_0);
         InitPwm(enb, LEDC_CHANNEL_1);
-        Stop();
+        if (in1 != GPIO_NUM_NC) gpio_set_level(in1, 0);
+if (in2 != GPIO_NUM_NC) gpio_set_level(in2, 0);
+if (in3 != GPIO_NUM_NC) gpio_set_level(in3, 0);
+if (in4 != GPIO_NUM_NC) gpio_set_level(in4, 0);
         ESP_LOGI(TAG, "OK");
     }
 
