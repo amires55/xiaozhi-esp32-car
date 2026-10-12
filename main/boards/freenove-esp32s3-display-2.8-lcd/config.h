@@ -49,5 +49,8 @@
 #define DISPLAY_OFFSET_Y      0
 #define DISPLAY_BACKLIGHT_OUTPUT_INVERT false
 #define DISPLAY_SPI_MODE      0
-
+#define MOTOR_IN1 GPIO_NUM_2
+#define MOTOR_IN2 GPIO_NUM_3
+#define MOTOR_IN3 GPIO_NUM_14
+#define MOTOR_IN4 GPIO_NUM_21
 #endif  // _BOARD_CONFIG_H_
