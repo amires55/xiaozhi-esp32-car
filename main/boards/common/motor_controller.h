@@ -88,15 +88,47 @@ if (in4 != GPIO_NUM_NC) gpio_set_level(in4, 0);
 };
 
 extern MotorController* g_motor;
-
 inline void MotorControl(const std::string& action, int speed) {
-    if (!g_motor) return;
-    if (action == "forward") g_motor->Forward(speed);
-    else if (action == "backward") g_motor->Backward(speed);
-    else if (action == "turn_left") g_motor->TurnLeft(speed);
-    else if (action == "turn_right") g_motor->TurnRight(speed);
-    else if (action == "stop") g_motor->Stop();
-    else ESP_LOGW(TAG, "Unknown motor action: %s", action.c_str());
+    if (!g_motor) {
+        ESP_LOGE(TAG, "Motor controller is NULL");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Motor command: action='%s', speed=%d",
+             action.c_str(), speed);
+
+    std::string cmd = action;
+
+    // Remove leading and trailing spaces
+    size_t first = cmd.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) {
+        ESP_LOGW(TAG, "Empty motor action");
+        return;
+    }
+
+    size_t last = cmd.find_last_not_of(" \t\r\n");
+    cmd = cmd.substr(first, last - first + 1);
+
+    // Convert to lowercase
+    for (char& c : cmd) {
+        if (c >= 'A' && c <= 'Z') {
+            c = c - 'A' + 'a';
+        }
+    }
+
+    if (cmd == "forward") {
+        g_motor->Forward(speed);
+    } else if (cmd == "backward") {
+        g_motor->Backward(speed);
+    } else if (cmd == "turn_left") {
+        g_motor->TurnLeft(speed);
+    } else if (cmd == "turn_right") {
+        g_motor->TurnRight(speed);
+    } else if (cmd == "stop") {
+        g_motor->Stop();
+    } else {
+        ESP_LOGW(TAG, "Unknown motor action: '%s'", cmd.c_str());
+    }
 }
 
 #endif
