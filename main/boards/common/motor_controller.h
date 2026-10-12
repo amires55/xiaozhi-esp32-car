@@ -73,20 +73,16 @@ if (in4 != GPIO_NUM_NC) gpio_set_level(in4, 0);
     }
 
     void Forward(int s) {
-        if (s <= 0) { Stop(); return; }
-        int d = s * 255 / 100; L(d,1,0); R(d,1,0); Note("▶前进");
+        int d = 255; L(d,1,0); R(d,1,0); Note("▶前进");
     }
     void Backward(int s) {
-        if (s <= 0) { Stop(); return; }
-        int d = s * 255 / 100; L(d,0,1); R(d,0,1); Note("◀后退");
+        int d = 255; L(d,0,1); R(d,0,1); Note("◀后退");
     }
     void TurnLeft(int s) {
-        if (s <= 0) { Stop(); return; }
-        int d = s * 255 / 100; L(d,0,1); R(d,1,0); Note("↺左转");
+        int d = 255; L(d,0,1); R(d,1,0); Note("↺左转");
     }
     void TurnRight(int s) {
-        if (s <= 0) { Stop(); return; }
-        int d = s * 255 / 100; L(d,1,0); R(d,0,1); Note("↻右转");
+        int d = 255; L(d,1,0); R(d,0,1); Note("↻右转");
     }
     void Stop() { L(0,0,0); R(0,0,0); Note("■停止"); }
 };
