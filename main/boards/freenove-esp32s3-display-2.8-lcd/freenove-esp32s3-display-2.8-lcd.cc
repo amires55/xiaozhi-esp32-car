@@ -208,7 +208,7 @@ void InitializeTools() {
 
     mcp.AddTool(
         "self.chassis.control",
-        "Control the robot: forward, backward, turn_left, turn_right, stop.",
+        "Robot movement. When user says go forward, move backward, turn left, turn right, or stop, call this tool. Persian: برو جلو، برو عقب، به چپ بپیچ، به راست بپیچ، بایست.",
         PropertyList({
             Property("action", kPropertyTypeString),
             Property("speed", kPropertyTypeInteger, 50, 0, 100),
