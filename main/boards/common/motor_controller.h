@@ -35,11 +35,25 @@ private:
         ledc_channel_config(&ch_cfg);
     }
 
-    void InitOut(gpio_num_t pin) {
-        if (pin == GPIO_NUM_NC) return;
-        gpio_config_t c = { .pin_bit_mask = (1ULL << pin), .mode = GPIO_MODE_OUTPUT };
-        gpio_config(&c);
+void InitOut(gpio_num_t pin) {
+    if (pin == GPIO_NUM_NC) return;
+
+    gpio_config_t c = {};
+    c.pin_bit_mask = (1ULL << pin);
+    c.mode = GPIO_MODE_OUTPUT;
+    c.pull_up_en = GPIO_PULLUP_DISABLE;
+    c.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    c.intr_type = GPIO_INTR_DISABLE;
+
+    esp_err_t err = gpio_config(&c);
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "GPIO %d initialization failed: %s",
+                 (int)pin, esp_err_to_name(err));
+    } else {
+        ESP_LOGI(TAG, "GPIO %d initialized as output", (int)pin);
     }
+}
 
     void L(int duty, int in1, int in2) {
         if (in1_pin_ != GPIO_NUM_NC) { gpio_set_level(in1_pin_, in1); gpio_set_level(in2_pin_, in2); }
