@@ -86,9 +86,14 @@ if (in4 != GPIO_NUM_NC) gpio_set_level(in4, 0);
         ESP_LOGI(TAG, "OK");
     }
 
-    void Forward(int s) {
-        int d = 255; L(d,1,0); R(d,1,0); Note("▶前进");
-    }
+void Forward(int s) {
+    gpio_set_level(in1_pin_, 1);
+    gpio_set_level(in2_pin_, 0);
+    gpio_set_level(in3_pin_, 1);
+    gpio_set_level(in4_pin_, 0);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    Note("FORWARD TEST");
+}
     void Backward(int s) {
         int d = 255; L(d,0,1); R(d,0,1); Note("◀后退");
     }
